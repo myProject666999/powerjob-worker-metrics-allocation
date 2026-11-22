@@ -39,4 +39,10 @@ public class PowerJobServerConfigKey {
     public static final String DING_APP_KEY = "oms.alarm.ding.app-key";
     public static final String DING_APP_SECRET = "oms.alarm.ding.app-secret";
     public static final String DING_AGENT_ID = "oms.alarm.ding.agent-id";
+
+    /**
+     * Worker 指标快照的最大年龄（毫秒），超过该年龄的快照会在排序 / 截断时被稳定后置（不剔除）。
+     * 未配置或配置为小于等于 0 时不启用年龄影响。
+     */
+    public static final String WORKER_SYSTEM_METRICS_MAX_AGE_MS = "oms.worker.system-metrics.max-age-ms";
 }

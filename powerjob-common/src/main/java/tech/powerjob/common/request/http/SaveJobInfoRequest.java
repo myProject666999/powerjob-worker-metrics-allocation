@@ -4,6 +4,7 @@ import tech.powerjob.common.enums.DispatchStrategy;
 import tech.powerjob.common.enums.ExecuteType;
 import tech.powerjob.common.enums.ProcessorType;
 import tech.powerjob.common.enums.TimeExpressionType;
+import tech.powerjob.common.exception.PowerJobException;
 import tech.powerjob.common.model.AlarmConfig;
 import tech.powerjob.common.model.JobAdvancedRuntimeConfig;
 import tech.powerjob.common.model.LogConfig;
@@ -99,15 +100,24 @@ public class SaveJobInfoRequest {
 
     /* ************************** Busy Machine setting. ************************** */
     /**
-     * Minimum CPU required. {@code 0} means there is no restriction.
+     * Minimum CPU cores required. {@code 0} means there is no restriction. A worker is available
+     * when its remaining cores {@code cpuProcessors - cpuLoad} are greater than or equal to this
+     * value; when the worker cannot report CPU load (e.g. Windows, {@code cpuLoad < 0}) the CPU
+     * requirement is skipped. Negative values are rejected by {@link #valid()}.
      */
     private double minCpuCores = 0;
     /**
-     * Minimum memory required, in GB.
+     * Minimum memory required, in GB. {@code 0} means there is no restriction.
+     *
+     * <p>This is compared against the remaining JVM heap ({@code jvmMaxMemory - jvmUsedMemory}),
+     * NOT the free memory of the physical machine. A worker is available when its remaining JVM
+     * heap is greater than or equal to this value. Negative values are rejected by {@link #valid()}.
      */
     private double minMemorySpace = 0;
     /**
-     * Minimum disk space, in GB. {@code 0} means there is no restriction.
+     * Minimum disk space, in GB. {@code 0} means there is no restriction. A worker is available
+     * when its remaining disk {@code diskTotal - diskUsed} is greater than or equal to this value.
+     * Negative values are rejected by {@link #valid()}.
      */
     private double minDiskSpace = 0;
 
@@ -171,6 +181,30 @@ public class SaveJobInfoRequest {
         CommonUtils.requireNonNull(executeType, "executeType can't be empty");
         CommonUtils.requireNonNull(processorType, "processorType can't be empty");
         CommonUtils.requireNonNull(timeExpressionType, "timeExpressionType can't be empty");
+        validResourceRequirements();
+    }
+
+    /**
+     * Validate the busy-machine requirements. {@code 0} means "no restriction" and any positive
+     * decimal is allowed; negative values are illegal because they have no meaning as a
+     * requirement and would make the availability rule ambiguous.
+     *
+     * <p>This is deliberately the only new validation: the filter signatures and the
+     * {@code WorkerFilter} extension point are left untouched.
+     */
+    private void validResourceRequirements() {
+        if (minCpuCores < 0) {
+            throw new PowerJobException("minCpuCores can't be negative: " + minCpuCores);
+        }
+        if (minMemorySpace < 0) {
+            throw new PowerJobException("minMemorySpace can't be negative: " + minMemorySpace);
+        }
+        if (minDiskSpace < 0) {
+            throw new PowerJobException("minDiskSpace can't be negative: " + minDiskSpace);
+        }
+        if (maxWorkerCount != null && maxWorkerCount < 0) {
+            throw new PowerJobException("maxWorkerCount can't be negative: " + maxWorkerCount);
+        }
     }
 
     public DispatchStrategy getDispatchStrategy() {

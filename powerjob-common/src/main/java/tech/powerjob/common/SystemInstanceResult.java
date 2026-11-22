@@ -23,6 +23,22 @@ public class SystemInstanceResult {
      */
     public static final String NO_WORKER_AVAILABLE = "no worker available";
     /**
+     * 应用下没有任何在线 worker（没有上报过心跳，或全部已超过心跳超时）。
+     * 与 {@link #NO_WORKER_AVAILABLE} 一样会写入实例结果并触发失败告警。
+     */
+    public static final String NO_ONLINE_WORKER = "no online worker";
+    /**
+     * 存在在线 worker，但没有任何一台满足任务的 CPU / 内存 / 磁盘（或指定机器）要求。
+     * 与 {@link #NO_WORKER_AVAILABLE} 一样会写入实例结果并触发失败告警。
+     */
+    public static final String NO_WORKER_MEETS_REQUIREMENTS = "no worker meets the job requirements";
+    /**
+     * 存在满足资源要求的 worker，但全部处于超载状态。
+     * 该场景保持原语义：取消本次派发、等待下一轮重新派发，不会把实例置为 FAILED，
+     * 因此不会产生失败告警。仅作为日志中的稳定标记。
+     */
+    public static final String ALL_WORKERS_OVERLOAD = "all workers are overloaded";
+    /**
      * 任务执行超时
      */
     public static final String INSTANCE_EXECUTE_TIMEOUT = "instance execute timeout";

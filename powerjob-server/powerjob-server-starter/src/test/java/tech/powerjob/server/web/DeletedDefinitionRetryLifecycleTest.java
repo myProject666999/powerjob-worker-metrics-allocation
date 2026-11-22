@@ -77,7 +77,8 @@ class DeletedDefinitionRetryLifecycleTest {
             when(transport.defaultProtocol()).thenReturn(protocol);
             when(apps.listAppIdByCurrentServer(protocol.getAddress())).thenReturn(Collections.singletonList(10L));
             WorkerInfo worker = new WorkerInfo(); worker.setAddress("worker-two:27777"); worker.setProtocol("HTTP");
-            when(workers.geAvailableWorkers(job)).thenReturn(Collections.singletonList(worker));
+            when(workers.geAvailableWorkersWithDetail(job)).thenReturn(
+                    new WorkerClusterQueryService.AvailableWorkers(Collections.singletonList(worker), 1));
             when(selector.select(eq(job), eq(instance), anyList())).thenReturn(worker);
             when(instances.update4TriggerSucceed(eq(40L), eq(InstanceStatus.WAITING_WORKER_RECEIVE.getV()), anyLong(), eq(worker.getAddress()), any(), eq(InstanceStatus.WAITING_DISPATCH.getV())))
                     .thenAnswer(call -> { instance.setStatus(call.getArgument(1)); instance.setTaskTrackerAddress(call.getArgument(3)); return 1; });

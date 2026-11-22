@@ -108,7 +108,7 @@ public class JobInfoDO {
      */
     private double minCpuCores;
     /**
-     * 最低内存空间，单位 GB，0代表不限
+     * 最低内存空间，单位 GB，0代表不限。注意：此处对比的是 JVM 剩余堆（jvmMaxMemory - jvmUsedMemory），不是机器可用物理内存
      */
     private double minMemorySpace;
     /**

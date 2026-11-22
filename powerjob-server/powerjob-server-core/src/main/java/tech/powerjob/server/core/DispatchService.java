@@ -148,13 +148,18 @@ public class DispatchService {
         }
 
         // 获取当前最合适的 worker 列表
-        List<WorkerInfo> suitableWorkers = workerClusterQueryService.geAvailableWorkers(jobInfo);
+        WorkerClusterQueryService.AvailableWorkers availableWorkers = workerClusterQueryService.geAvailableWorkersWithDetail(jobInfo);
+        List<WorkerInfo> suitableWorkers = availableWorkers.getWorkers();
 
         if (CollectionUtils.isEmpty(suitableWorkers)) {
-            log.warn("[Dispatcher-{}|{}] cancel dispatch job due to no worker available", jobId, instanceId);
-            instanceInfoRepository.update4TriggerFailed(instanceId, FAILED.getV(), current, current, RemoteConstant.EMPTY_ADDRESS, SystemInstanceResult.NO_WORKER_AVAILABLE, now);
+            // 区分「没有任何在线 worker」与「有在线 worker 但全部不满足要求」；两者均为终态失败并会触发告警
+            String reason = availableWorkers.isNoOnlineWorker()
+                    ? SystemInstanceResult.NO_ONLINE_WORKER
+                    : SystemInstanceResult.NO_WORKER_MEETS_REQUIREMENTS;
+            log.warn("[Dispatcher-{}|{}] cancel dispatch job due to {}, online workers: {}", jobId, instanceId, reason, availableWorkers.getTotalOnline());
+            instanceInfoRepository.update4TriggerFailed(instanceId, FAILED.getV(), current, current, RemoteConstant.EMPTY_ADDRESS, reason, now);
 
-            instanceManager.processFinishedInstance(instanceId, instanceInfo.getWfInstanceId(), FAILED, SystemInstanceResult.NO_WORKER_AVAILABLE);
+            instanceManager.processFinishedInstance(instanceId, instanceInfo.getWfInstanceId(), FAILED, reason);
             return;
         }
         // 判断是否超载，在所有可用 worker 超载的情况下直接跳过当前任务
@@ -162,7 +167,7 @@ public class DispatchService {
         if (suitableWorkers.isEmpty()) {
             // 直接取消派发，减少一次数据库 io
             overloadOptional.ifPresent(booleanHolder -> booleanHolder.set(true));
-            log.warn("[Dispatcher-{}|{}] cancel to dispatch job due to all worker is overload", jobId, instanceId);
+            log.warn("[Dispatcher-{}|{}] cancel to dispatch job due to {}, it will be retried later", jobId, instanceId, SystemInstanceResult.ALL_WORKERS_OVERLOAD);
             return;
         }
         List<String> workerIpList = suitableWorkers.stream().map(WorkerInfo::getAddress).collect(Collectors.toList());
